@@ -1,0 +1,24 @@
+# fly.toml app configuration file generated for bilgehane-api on 2024-10-04T19:18:55+03:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'bilgehane-api'
+primary_region = 'otp'
+
+[build]
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+  [services.ports.http_options]
+    idle_timeout = 900

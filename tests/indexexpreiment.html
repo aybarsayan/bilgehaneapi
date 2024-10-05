@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soru Üretme Arayüzü</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        body {
+            padding: 2rem;
+            background-color: #f7f7f7;
+        }
+        .container {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .btn-primary {
+            background-color: #6200ea;
+            border-color: #6200ea;
+        }
+        .btn-primary:hover {
+            background-color: #3700b3;
+            border-color: #3700b3;
+        }
+        .results {
+            margin-top: 2rem;
+        }
+        .dropzone {
+            border: 2px dashed #6200ea;
+            padding: 2rem;
+            text-align: center;
+            border-radius: 8px;
+            background-color: #f0f0f0;
+            cursor: pointer;
+        }
+        .dropzone.dragover {
+            background-color: #d3d3d3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4">Soru Üretme Arayüzü</h1>
+        <form id="soruForm">
+            <div class="form-group">
+                <label for="category">Kategori:</label>
+                <input type="number" class="form-control" id="category" placeholder="Kategori ID" required>
+            </div>
+            <div class="form-group">
+                <label for="subcategory">Alt Kategori:</label>
+                <input type="number" class="form-control" id="subcategory" placeholder="Alt Kategori ID" required>
+            </div>
+            <div class="form-group">
+                <label for="language_id">Dil ID:</label>
+                <input type="number" class="form-control" id="language_id" placeholder="Dil ID" required>
+            </div>
+            <div class="form-group">
+                <label for="num_questions">Soru Sayısı:</label>
+                <input type="number" class="form-control" id="num_questions" placeholder="Soru Sayısı" required>
+            </div>
+            <div class="form-group">
+                <label for="topic">Konu:</label>
+                <input type="text" class="form-control" id="topic" placeholder="Konu" required>
+            </div>
+            <div class="form-group">
+                <label for="questionid">Başlangıç Soru ID:</label>
+                <input type="number" class="form-control" id="questionid" placeholder="Başlangıç Soru ID" required>
+            </div>
+            <div class="form-group">
+                <label for="VECTOR_STORE_ID">Vector Store ID:</label>
+                <input type="text" class="form-control" id="VECTOR_STORE_ID" placeholder="Vector Store ID" required>
+            </div>
+            <div class="form-group">
+                <label for="language">Dil:</label>
+                <input type="text" class="form-control" id="language" placeholder="Dil" required>
+            </div>
+
+            <!-- Dosya Yükleme Alanı -->
+            <div class="form-group">
+                <label for="file">Dosya Yükle:</label>
+                <div id="dropzone" class="dropzone">
+                    Dosyanızı buraya sürükleyip bırakın veya tıklayın
+                </div>
+                <input type="file" id="fileInput" class="form-control" style="display:none;" required>
+                <div id="fileName" class="mt-2"></div>
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-3">Çalıştır</button>
+        </form>
+
+        <div class="results mt-4">
+            <h2>Sonuçlar</h2>
+            <div id="resultLabels"></div>
+        </div>
+    </div>
+
+    <script>
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+
+        dropzone.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files[0];
+            if (file) {
+                fileName.textContent = `Yüklenen dosya: ${file.name}`;
+            }
+        });
+
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('dragover');
+        });
+
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('dragover');
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('dragover');
+
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                fileInput.files = e.dataTransfer.files;
+                fileName.textContent = `Yüklenen dosya: ${file.name}`;
+            }
+        });
+
+        document.getElementById('soruForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('category', document.getElementById('category').value);
+            formData.append('subcategory', document.getElementById('subcategory').value);
+            formData.append('language_id', document.getElementById('language_id').value);
+            formData.append('num_questions', document.getElementById('num_questions').value);
+            formData.append('topic', document.getElementById('topic').value);
+            formData.append('questionid', document.getElementById('questionid').value);
+            formData.append('VECTOR_STORE_ID', document.getElementById('VECTOR_STORE_ID').value);
+            formData.append('language', document.getElementById('language').value);
+
+            // Dosyayı ekle
+            const file = fileInput.files[0];
+            if (file) {
+                formData.append('file', file);
+            }
+
+            const apiAnahtari = 'test'; // Bu sabit, backenddeki API_KEY ile aynı olmalı
+
+            fetch(`http://localhost:3000/analiz/${apiAnahtari}`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultDiv = document.getElementById('resultLabels');
+                resultDiv.innerHTML = '';
+
+                if (data.results && data.results.affectedRows > 0) {
+                    const successLabel = document.createElement('span');
+                    successLabel.className = 'badge bg-success';
+                    successLabel.textContent = `Başarıyla ${data.results.affectedRows} satır eklendi.`;
+                    resultDiv.appendChild(successLabel);
+                } else if (data.message) {
+                    const errorLabel = document.createElement('span');
+                    errorLabel.className = 'badge bg-danger';
+                    errorLabel.textContent = `Hata: ${data.message}`;
+                    resultDiv.appendChild(errorLabel);
+                }
+            })
+            .catch(error => {
+                const resultDiv = document.getElementById('resultLabels');
+                resultDiv.innerHTML = '';
+                const errorLabel = document.createElement('span');
+                errorLabel.className = 'badge bg-danger';
+                errorLabel.textContent = `Hata: ${error.message}`;
+                resultDiv.appendChild(errorLabel);
+            });
+        });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

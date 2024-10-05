@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bilgehane Yapay Zeka Destekli Soru Üretme Arayüzü</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f0f4f8;
+            padding: 2rem;
+        }
+        .container {
+            background: #ffffff;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-control {
+            border-radius: 8px;
+        }
+        .btn-primary {
+            background-color: #3498db;
+            border-color: #3498db;
+            border-radius: 8px;
+            padding: 0.5rem 1.5rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            background-color: #2980b9;
+            border-color: #2980b9;
+            transform: translateY(-2px);
+        }
+        .results {
+            margin-top: 2rem;
+            padding: 1rem;
+            background-color: #ecf0f1;
+            border-radius: 8px;
+        }
+        .loading-spinner {
+            display: none;
+            margin: 10px 0;
+            color: #3498db;
+        }
+        #confetti-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+        }
+        .drop-area {
+            border: 2px dashed #bdc3c7;
+            border-radius: 12px;
+            width: 100%;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .drop-area:hover, .drop-area.dragover {
+            background-color: #ecf0f1;
+            border-color: #3498db;
+        }
+        .modal-content {
+            border-radius: 12px;
+        }
+        .modal-header {
+            background-color: #3498db;
+            color: #ffffff;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+        }
+        .modal-footer {
+            border-bottom-left-radius: 12px;
+            border-bottom-right-radius: 12px;
+        }
+        #apiKey {
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1> Bilgehane 🧠 Yapay Zeka Destekli Soru Üretme Arayüzü</h1>
+        <form id="soruForm">
+            <div class="form-group">
+                <label for="category">📚 Kategori:</label>
+                <select class="form-control" id="category" required></select>
+            </div>
+            <div class="form-group">
+                <label for="subcategory">🔍 Alt Kategori:</label>
+                <select class="form-control" id="subcategory" required></select>
+            </div>
+            <div class="form-group">
+                <label for="language_select">🌍 Dil:</label>
+                <select class="form-control" id="language_select" required>
+                    <option value="52,türkçe">Türkçe</option>
+                    <option value="14,ingilizce">İngilizce</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="num_questions">🔢 Soru Sayısı:</label>
+                <input type="number" class="form-control" id="num_questions" placeholder="Soru Sayısı" required>
+            </div>
+            <div class="form-group">
+                <label for="topic">📝 Konu:</label>
+                <input type="text" class="form-control" id="topic" placeholder="Konu" required>
+            </div>
+            <div class="form-group">
+                <label for="VECTOR_STORE_ID">🔗 Veri Tabanı Numarası (Dosya yükleyerek otomatik üretebilirsiniz):</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="VECTOR_STORE_ID" placeholder="Vector Store ID">
+                    <button type="button" class="btn btn-secondary" id="uploadButton">📤 Yükle</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="apiKey">🔑 API Anahtarı:</label>
+                <input type="password" class="form-control" id="apiKey" placeholder="API Anahtarı" required>
+            </div>
+            <button type="submit" class="btn btn-primary mt-3">🚀 Çalıştır</button>
+        </form>
+
+        <div class="results mt-4">
+            <h2 id="resultsHeader" style="display: none;">📊 Sonuçlar</h2>
+            <div id="resultLabels"></div>
+            <div id="loadingSpinner" class="loading-spinner">
+                <span class="spinner-border spinner-border-sm"></span> Yükleniyor...
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="uploadModalLabel">📁 Dosya Yükle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="dropArea" class="drop-area">
+                        <p>📄 Dosyaları buraya sürükleyin veya tıklayarak seçin</p>
+                        <input type="file" id="fileInput" multiple accept=".pdf,.txt,.docx,.xlsx" style="display: none;">
+                    </div>
+                    <div id="fileList"></div>
+                    <div id="uploadResult" style="display: none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">❌ Kapat</button>
+                    <button type="button" class="btn btn-primary" id="uploadFiles">📤 Dosyaları Yükle</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="confetti-canvas"></canvas>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/confetti-js@0.0.17/dist/index.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

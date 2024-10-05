@@ -1,0 +1,54 @@
+body {
+    padding: 2rem;
+    background-color: #f7f7f7;
+}
+.container {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+.form-group {
+    margin-bottom: 1rem;
+}
+.btn-primary {
+    background-color: #6200ea;
+    border-color: #6200ea;
+}
+.btn-primary:hover {
+    background-color: #3700b3;
+    border-color: #3700b3;
+}
+.results {
+    margin-top: 2rem;
+}
+.loading-spinner {
+    display: none;
+    margin: 10px 0;
+}
+#confetti-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+}
+.drop-area {
+    border: 2px dashed #ccc;
+    border-radius: 20px;
+    width: 100%;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.drop-area.dragover {
+    background-color: #f0f0f0;
+    border-color: #000;
+}
+
+.modal-dialog{
+    padding-top: 100;
+}
