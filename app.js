@@ -86,6 +86,8 @@ app.use(cors({
 app.use('/analiz', bodyParser.json());
 app.use('/subtopics', bodyParser.json());
 app.use('/analiz-v2', bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json());
 
 function apiKeyMiddleware(req, res, next) {
   const apiKey = req.params.apiAnahtari;
@@ -495,4 +497,124 @@ app.post('/upload-pdfs/:apiAnahtari', apiKeyMiddleware, upload.array('pdfs'), as
     console.error('Dosya yükleme hatası:', error);
     res.status(500).json({ message: 'Dosya yükleme sırasında bir hata oluştu', error: error.message });
   }
+});
+
+app.post('/stream/:apiAnahtari', apiKeyMiddleware, async (req, res) => {
+  const { prompt } = req.body;
+
+  if (!prompt) {
+    return res.status(400).json({ message: 'Prompt gereklidir.' });
+  }
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+  });
+
+  try {
+    const stream = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [{ role: "user", content: prompt }],
+      stream: true,
+    });
+
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content || "";
+      if (content) {
+        res.write(`data: ${JSON.stringify({ content })}\n\n`);
+      }
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    res.write(`data: ${JSON.stringify({ error: 'Bir hata oluştu' })}\n\n`);
+  }
+
+  res.write('data: [DONE]\n\n');
+  res.end();
+});
+
+app.post('/generate-questions/:apiAnahtari', apiKeyMiddleware, async (req, res) => {
+  const { category, subcategory, language_id, num_questions, topic, questionid, VECTOR_STORE_ID, language } = req.body;
+
+  // Girdi kontrolleri
+  if (!category || !subcategory || !language_id || !num_questions || !topic || !VECTOR_STORE_ID || !language) {
+    return res.status(400).json({ message: 'Geçersiz istek. Tüm alanlar gereklidir.' });
+  }
+
+  // Her zorluk derecesi için soru sayısını belirleme
+  const num_easy = Math.floor(num_questions / 3);
+  const num_medium = Math.floor(num_questions / 3);
+  const num_hard = num_questions - (num_easy + num_medium);
+
+  const userMessage = `
+    Generate ${num_questions} multiple-choice questions about ${topic} using the information stored in the vector database. 
+    Each question should be relevant, well-structured, and designed to test understanding of the key concepts of ${topic}. 
+    Questions should cover various aspects of ${topic} such as its features, use cases, and technical details.
+      
+    Create ${num_easy} easy questions, ${num_medium} medium questions, and ${num_hard} hard questions.
+      
+    Please format the output as an Markdown
+    - id: start at ${questionid} and increment by one for each question
+    - category: ${category}
+    - subcategory: ${subcategory}
+    - language_id: ${language_id}
+    - image: use '' (empty string) for all questions
+    - question: The generated question text. Ensure any single quotes in the question text are properly escaped (use '' instead of ').
+    - question_type: 1 (all questions should be multiple choice)
+    - optiona: Option 1 text
+    - optionb: Option 2 text
+    - optionc: Option 3 text
+    - optiond: Option 4 text
+    - optione: '' (optional, use '' if not applicable)
+    - answer: 'a' for optiona, 'b' for optionb, 'c' for optionc, or 'd' for optiond
+    - level: 1 for easy, 2 for medium, 3 for hard
+    - note: Any additional notes relevant to the question
+      
+
+    Ensure that:
+    - This text should not be placed inside a code block or any markdown text. They will be plain text responses.
+    - All questions are multiple choice with 4 options (optiona, optionb, optionc, and optiond).
+    - Questions will be in ${language} language.
+    - If any of the options (optiona, optionb, etc.) are not used, replace them with an empty string '' instead of NULL.
+    - There are no additional comments, descriptions, or explanations outside of the SQL code.
+    - After creating the questions check the answers and make sure they are correct
+    - Ensure to escape quotation marks in the markdown format
+    - Ensure under no circumstances that you provide additional comments, descriptions, or explanations outside of the SQL code. Check if your answer meets this criterion.
+  `;
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+  });
+
+  try {
+    const stream = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: userMessage }],
+      stream: true,
+    });
+
+    let fullResponse = '';
+    
+    
+    for await (const chunk of stream) {
+      console.log(chunk.choices[0]?.delta?.content);
+      const content = chunk.choices[0]?.delta?.content || "";
+      if (content) {
+        fullResponse += content;
+        //const trimmedContent = validateAndFixSQL(fullResponse);
+        res.write(`data: ${JSON.stringify({ content: content })}\n\n`);
+      }
+    }
+
+    res.write(`data: ${JSON.stringify({ content: validateAndFixSQL(fullResponse) })}\n\n`);
+    res.write('data: [DONE]\n\n');
+  } catch (error) {
+    console.error('Error:', error);
+    res.write(`data: ${JSON.stringify({ error: 'Bir hata oluştu' })}\n\n`);
+  }
+
+  res.end();
 });

@@ -3,7 +3,7 @@ let max_question_id_val;
 document.addEventListener('DOMContentLoaded', async function () {
     try {
         const apiAnahtari = 'test'; // Bu sabit, backenddeki API_KEY ile aynı olmalı
-        const response = await fetch(`http://localhost:3000/getsqlinfo/${apiAnahtari}`, {
+        const response = await fetch(`https://bilgehane-api.fly.dev/getsqlinfo/${apiAnahtari}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
@@ -79,7 +79,7 @@ document.getElementById('soruForm').addEventListener('submit', async function (e
 
     try {
         // İlk olarak alt konuları al
-        const subtopicsResponse = await fetch(`http://localhost:3000/subtopics/${apiAnahtari}`, {
+        const subtopicsResponse = await fetch(`https://bilgehane-api.fly.dev/subtopics/${apiAnahtari}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -110,7 +110,7 @@ document.getElementById('soruForm').addEventListener('submit', async function (e
             for (let i = 0; i < questionsForTopic; i += 12) {
                 const questionsInThisBatch = Math.min(12, questionsForTopic - i);
 
-                const response = await fetch(`https://bilgehane-api.fly.dev/${apiAnahtari}`, {
+                const response = await fetch(`https://bilgehane-api.fly.dev/analiz/${apiAnahtari}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -234,7 +234,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             console.log("Sunucuya istek gönderiliyor...");
-            const response = await fetch('http://localhost:3000/upload-pdfs/test', {
+            const response = await fetch('https://bilgehane-api.fly.dev/upload-pdfs/test', {
                 method: 'POST',
                 body: formData,
                 mode: 'cors',
