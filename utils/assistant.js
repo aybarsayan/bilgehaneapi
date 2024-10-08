@@ -1,13 +1,10 @@
 // utils/assistant.js
 
 const OpenAI = require('openai');
-const fs = require('fs');
-const path = require('path');
 require('dotenv').config();
 
 // OpenAI API anahtarınızı burada da dahil edin
 const openai = require('./openai'); // openai.js dosyasından içe aktarın
-
 
 // Mevcut asistan kimliği
 const ASSISTANT_ID = 'asst_Ma3hbnEqnFAMwiNbUC8RxClZ'; // Mevcut asistan kimliği
@@ -24,7 +21,6 @@ async function getOrCreateAssistant() {
       console.error('Mevcut asistan alınamadı, yeni bir asistan oluşturuluyor...');
     }
   }
-  // Yeni bir asistan oluşturun
   // Yeni bir asistan oluşturun
   const assistant = await openai.beta.assistants.create({
     name: 'Soru Üretim Asistanı',
@@ -50,7 +46,17 @@ async function createThread(userMessage) {
   return thread;
 }
 
-// Asistan yanıtını alma
+// Asistan yanıtını alma (Streaming)
+function getAssistantResponseStream(threadId, assistantId) {
+  const stream = openai.beta.threads.runs.createCompletion({
+    thread_id: threadId,
+    assistant_id: assistantId,
+    stream: true,
+  });
+
+  return stream;
+}
+
 async function getAssistantResponse(thread, assistant) {
   return new Promise((resolve, reject) => {
     let assistantResponse = '';
@@ -76,9 +82,11 @@ async function getAssistantResponse(thread, assistant) {
       });
   });
 }
+
 // Fonksiyonları dışa aktar
 module.exports = {
   getOrCreateAssistant,
   createThread,
   getAssistantResponse,
+  getAssistantResponseStream,
 };
